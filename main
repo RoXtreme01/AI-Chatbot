@@ -1,0 +1,794 @@
+import tkinter as tk   # Tkinter for GUI
+from tkinter import messagebox   # Messagebox : To generate error box, info box
+from PIL import Image, ImageTk   # For Handling Image in Gui
+import os, sys
+import customtkinter as ctk      # For Advance Gui
+import random as r    # Generates Random Data : for Captcha
+import cohere    # Ai Api 
+import threading
+import sqlite3
+
+# for Exception Handling try and except
+try:
+
+    # Creates Relative Path
+    def resource_path(relative_path):
+        try:
+            base_path = sys._MEIPASS
+        except:
+            base_path = os.path.abspath(".")
+        
+        return os.path.join(base_path, relative_path)
+    
+    # creates connection between Python and Sql Database
+    mycon=sqlite3.connect("ai.db")
+    mycon.execute('''
+        CREATE TABLE IF NOT EXISTS user_database (
+            User_Name VARCHAR(15) PRIMARY KEY,
+            Password VARCHAR(20) NOT NULL,
+            Mob_Number BIGINT              
+                  );
+''')
+    
+    try:
+        # Api key to creates connection to Ai
+        co = cohere.Client('Your Cohere API Key')
+
+    # General Exception Handling
+    except Exception as e:
+        messagebox.showerror("Error",f"{e}")
+
+    # First Window 
+    root = tk.Tk()
+    root.geometry("1500x770")
+    root.resizable(False, False)
+
+    # Background images
+    front = Image.open(resource_path("Images/front.png")).resize((1500, 770))
+    final_front = ImageTk.PhotoImage(front)
+
+    showimg=Image.open(resource_path("Images/show.jpeg")).resize((20,20))
+    final_show=ImageTk.PhotoImage(showimg)
+    
+    hideimg=Image.open(resource_path("Images/hide.jpeg")).resize((20,20))
+    final_hide=ImageTk.PhotoImage(hideimg)
+
+    label = tk.Label(root, image=final_front)
+    label.pack()
+
+    # Enter Button Command
+    def button_click():
+
+        #Second Window
+        rootx=tk.Frame(root,bg="Black",height=400,width=400)
+        rootx.place(relwidth=1,relheight=1)
+
+        def loginfinal(): 
+
+            # Login Button Command
+
+            try:
+                
+                # cursor() is a middle man of python and Mysql
+                # Fetching data from Entry
+                NAME=name.get()
+                PASSWORD=password.get()
+                MOB=mob.get()
+                CAPTCHA=captchaen.get()
+        
+                # Sql Command
+                command_sql1="select * from USER_DATABASE;"
+
+                # Fetchall fetches all data from Mysql database
+                list=mycon.execute(command_sql1)
+                
+                # fetching data in the form of tuple
+                data_tuple=()
+                for data in list:
+                    if data[0]==str(NAME):
+                        data_tuple=data
+
+            # General Exception Handling
+            except Exception as E:
+                messagebox.showerror("Error",f"{E}")
+
+            # Final Login Condition
+            if NAME==str(data_tuple[0]) and PASSWORD==str(data_tuple[1]) and MOB==str(data_tuple[-1]) and CAPTCHA==captcha:
+               
+                # Third Window 
+
+                rooty=tk.Frame(root,bg="black")
+                rooty.place(relwidth=1,relheight=1)
+                  
+                textbox2=ctk.CTkTextbox(
+                        rooty,
+                        scrollbar_button_color="#FFCC70",
+                        corner_radius=30,
+                        font=("Cambria",16,"bold"),
+                        border_color="#fe5900",
+                        border_width=3,
+                        fg_color="#C2C2C2",
+                        text_color="black",
+                        width=230,
+                        height=450,
+                        state="disable",
+                        bg_color="black")
+                textbox2.place(x=1230,y=270)
+
+                # Fetch history data from the database
+                try:
+                    def check_table_exists(table_name):
+                        conn = sqlite3.connect('ai.db')
+                        cursor = conn.cursor()
+                        
+                        cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table_name}';")
+                        result = cursor.fetchone()
+                        
+                        if result:
+                            return True  # Table exists
+                        else:
+                            return False  # Table does not exist
+
+                    # Usage
+                    table_name = NAME
+
+                    if check_table_exists(table_name):
+
+                        commandx = f"SELECT * FROM '{NAME}';"
+                        s=mycon.execute(commandx)
+                        data_list=[]
+
+                        # Create separation and populate textbox
+
+                        textbox2.configure(state="normal")
+                        textbox2.insert(tk.END, "___________________________\n")
+
+                        for data in s:
+                            data_list.append(data[0])
+
+                        data_list.reverse()
+                        for datahis in data_list:
+                            textbox2.insert(tk.END, f"{datahis}\n")
+                            textbox2.insert(tk.END, "___________________________\n")
+
+                        textbox2.configure(state="disable")
+
+                    else:
+                    
+                        command = f"CREATE TABLE IF NOT EXISTS \"{NAME}\" (History VARCHAR(255));"
+
+                        mycon.execute(command)
+
+
+                # General Exception Handling
+                except Exception as Ecp:
+                    messagebox.showerror("Error", f"{Ecp}")
+
+                # Creates Conncetion Between Cohere Ai and User 
+                def get_ai_response(prompt):
+                    try:
+                        response = co.generate(
+                            model='command-xlarge',
+                            prompt=prompt,
+                            temperature=slider.get()
+                        )
+
+                    # General Exception Handling
+                    except Exception as e:
+                        messagebox.showerror("Error",f"{e}")
+
+                    # Final Answer of Ai
+                    return response.generations[0].text.strip().replace("Coral!","RoxAi").replace("Coral","RoxAi").replace("Cohere","RoxAi").replace("Dr. Aidan Gomez","Rohit").replace("cohere!","RoxAi")
+
+
+                # Load and resize the image
+                front = Image.open(resource_path("Images/interface.png")).resize((1500, 770))
+                final_front = ImageTk.PhotoImage(front)
+
+                # Display the image as the background
+                label = tk.Label(rooty, image=final_front)
+                label.place(x=0, y=0)  # Position the image at the top-left corner
+
+                # Add a CustomTkinter slider
+                slider = ctk.CTkSlider(
+                        rooty,
+                        from_=0.1,
+                        to=1.0,
+                        number_of_steps=9,
+                        button_color="red",
+                        progress_color="white",
+                        bg_color="black",
+                        orientation="vertical",  # Vertical orientation
+                    )
+                slider.place(x=50, y=210)
+                slider.configure(height=400,width=30)
+
+                # Default Value in Slider 
+                num=tk.Label(rooty,text="0.6",font="Arial 13 bold",bg="black",fg="white")
+                num.place(x=50,y=180)
+
+                # Udates the value of Slider 
+                def update_label(value):
+                    num.configure(text=f"{float(value):.1f}")
+                        
+                slider.configure(command=update_label)
+
+                # Ai and User Interface text box
+                textbox=ctk.CTkTextbox(
+                        rooty,
+                        scrollbar_button_color="#FFCC70",
+                        corner_radius=30,
+                        border_color="#fe5900",
+                        border_width=3,
+                        fg_color="#C2C2C2",
+                        width=970,
+                        font=("Cambria",16,"bold"),
+                        state="disable",
+                        text_color="black",
+                        height=570,
+                        bg_color="#787878")
+                textbox.place(x=140,y=70)
+
+                # History textbox
+                textbox2=ctk.CTkTextbox(
+                        rooty,
+                        scrollbar_button_color="#FFCC70",
+                        corner_radius=30,
+                        border_color="#fe5900",
+                        border_width=3,
+                        fg_color="#C2C2C2",
+                        width=230,
+                        height=450,
+                        state="disable",
+                        text_color="black",
+                        bg_color="black")
+                textbox2.place(x=1230,y=270)
+
+                # Fetch history data from the database
+                try:
+                    def check_table_exists(table_name):
+                        conn = sqlite3.connect('ai.db')
+                        cursor = conn.cursor()
+                        
+                        cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table_name}';")
+                        result = cursor.fetchone()
+                        
+                        conn.close()
+                        
+                        if result:
+                            return True  # Table exists
+                        else:
+                            return False  # Table does not exist
+
+                    # Usage
+                    table_name = NAME
+
+                    if check_table_exists(table_name):
+
+                        commandx = f"SELECT * FROM '{NAME}';"
+                        s=mycon.execute(commandx)
+                        data_list=[]
+
+                        # Create separation and populate textbox
+
+                        textbox2.configure(state="normal")
+                        textbox2.insert(tk.END, "___________________________\n")
+
+                        for data in s:
+                            data_list.append(data[0])
+
+                        data_list.reverse()
+                        for datahis in data_list:
+                            textbox2.insert(tk.END, f"{datahis}\n")
+                            textbox2.insert(tk.END, "___________________________\n")
+
+                        textbox2.configure(state="disable")
+
+
+                    else:
+                        command = f"CREATE TABLE IF NOT EXISTS \"{NAME}\" (History VARCHAR(255));"
+
+                        mycon.execute(command)
+
+
+                # General Exception Handling
+                except Exception as Ecp:
+                    messagebox.showerror("Error", f"{Ecp}")
+
+                # Prompt Box : for user
+                promt_box=ctk.CTkTextbox(
+                        rooty,
+                        scrollbar_button_color="black",
+                        border_color="#fe5900",
+                        border_width=2,
+                        fg_color="#C2C2C2",
+                        text_color="black",
+                        width=700,
+                        height=60,
+                        font=("Cambria",16,"bold"),
+                        bg_color="#C2C2C2"
+                    )
+                promt_box.place(x=250,y=670)
+
+                his=tk.Label(rooty,text="HISTORY",font="Algerian",bg="black",fg="white")
+                his.place(x=1310,y=240)
+
+                # Slider Information
+                def information():
+                    messagebox.showinfo("Information", "This slider indicates the AI's answer hardness level:\n0.5-1.0: User-friendly\n0.1-0.4: Technical")
+
+                info = Image.open(resource_path("Images/infoicon.jpg"))
+                final_info = ctk.CTkImage(light_image=info, size=(40,40))
+
+                info_button=ctk.CTkButton(rooty,
+                        image=final_info,
+                        text="",
+                        bg_color="black",
+                        width=5,
+                        hover_color="black",
+                        fg_color="black",
+                        cursor="hand2",
+                        command=information
+                        )
+                info_button.place(x=37,y=620)
+
+                # logout Window 
+                def center_window(parent, window):
+                            parent.update_idletasks()  # Ensure that the parent window's geometry is calculated
+                            width = window.winfo_width()
+                            height = window.winfo_height()
+                            parent_width = parent.winfo_width()
+                            parent_height = parent.winfo_height()
+                            x = parent.winfo_x() + (parent_width // 2) - (width // 2)
+                            y = parent.winfo_y() + (parent_height // 2) - (height // 2)
+                            window.geometry(f'{width}x{height}+{x}+{y}')
+
+                def user_info():
+
+                    def logout_command():
+                        if rooty.winfo_exists():
+                            rooty.destroy()
+
+                    # fourth Window
+                    details=tk.Toplevel(rooty)
+                    details.title("Details Window")
+                    details.configure(bg="black")
+                    details.geometry("300x135")  
+                    center_window(root, details)
+                    N_LAB=tk.Label(details,text=f"Username : {NAME}",fg="white",bg="black",font="Arial 13 bold")
+                    N_LAB.place(x=20,y=20)
+                    M_LAB=tk.Label(details,text=f"Mob : {MOB}",fg="white",bg="black",font="Arial 13 bold")
+                    M_LAB.place(x=20,y=60)
+                    logout=ctk.CTkButton(details,
+                                                text="logout",
+                                                corner_radius=5,
+                                                width=10,
+                                                hover_color="#FF3030",
+                                                bg_color="black",
+                                                command=logout_command,
+                                                fg_color="#B22222"
+                                                )
+                    logout.place(x=130,y=95)
+
+
+                regis = Image.open(resource_path("Images/register.jpeg"))
+                final_regis = ctk.CTkImage(light_image=regis, size=(55,55))
+
+                regis_button=ctk.CTkButton(rooty,
+                    image=final_regis,
+                        text="",
+                        bg_color="black",
+                        width=5,
+                        hover_color="black",
+                        fg_color="black",
+                        cursor="hand2",
+                        command=user_info
+                        )
+                regis_button.place(x=10,y=65)
+                        
+                # Image for Send Button 
+                send = Image.open(resource_path("Images/send.png"))
+                final_send = ctk.CTkImage(light_image=send, size=(50,50))
+
+                def process_answer(prompt, text_widget):
+                    
+                    thread = threading.Thread(args=(prompt, text_widget), daemon=True)
+                    thread.start()
+
+                # Sending Prompt to Ai
+                def send_message(event=None):
+
+                    try:
+                        mess.configure(text="Generating.... [It will take some time]", fg="red")
+                        mess.update_idletasks()
+                    except Exception as n:
+                        pass
+                    
+                    user_input=promt_box.get("1.0", tk.END).strip()
+                    command4=f"INSERT INTO `{NAME}` VALUES ('{user_input}');"
+                    mycon.execute(command4)
+                    mycon.commit()
+                        
+                    promt_box.delete("1.0",tk.END)
+
+                    user_input.replace("roxai","cohere").replace("Roxai","Cohere").replace("RoxAi","AI")
+
+                    textbox.configure(state="normal")
+                    textbox.insert(tk.END, "You : " + user_input + "\n")
+
+                    ai_response = get_ai_response(user_input)
+                    textbox.insert(tk.END, "RoXAi : " + ai_response + "\n\n")
+
+                    process_answer(promt_box,textbox)
+
+                    # __ for Seperation
+                    textbox.insert(tk.END,"_______________________________________________________________________________________________________________________________________________________")
+                    mess.configure(text="Your answer is Generated!!!", fg="blue")
+                    textbox.yview(tk.END)  
+                    textbox.configure(state="disabled")
+
+                promt_box.bind("<Return>", send_message)
+
+                mess=tk.Label(rooty, text="", bg="black", fg="red", font="Arial 15 bold")
+                mess.place(x=450,y=10)
+
+                send_button=ctk.CTkButton(rooty,
+                                                text="",
+                                                image=final_send,
+                                                corner_radius=5,
+                                                width=10,
+                                                hover_color="#C2C2C2",
+                                                bg_color="#C2C2C2",
+                                                command=send_message,
+                                                fg_color="#C2C2C2"
+                                                )
+                send_button.place(x=980,y=670)
+
+                rooty.mainloop()
+
+            # login Condition    
+            elif NAME!=str(data_tuple[0]):
+                messagebox.showerror("Error",f"Username {NAME} doesn't exists !")
+                    
+            elif PASSWORD!=str(data_tuple[1]):
+                messagebox.showerror("Error",f"Password {PASSWORD} doesn't exists !")
+                    
+            elif MOB!=str(data_tuple[-1]):
+                messagebox.showerror("Error","Invalid Phone Number")
+
+            elif CAPTCHA!=captcha:
+                messagebox.showerror("Captcha","Invalid Captcha")
+
+            else:
+                messagebox.showerror("Error","ID doesn't exists")
+
+        # SignUp Section
+        def signup_frame():
+
+            try:
+                
+                # Fifth Window 
+                frame = tk.Frame(rootx, width=1500, height=770)
+                frame.place(x=0, y=0) 
+
+                def left():
+                    if frame.winfo_exists():
+                        frame.destroy()
+
+                def submit_command():
+                    try:
+                        # SignUp Condition 
+                        if capxe.get()==c and usere.get()!="" and cpasse==passe.get() or mobe.get()!="":
+
+                            # Sql Connection
+                            USER=usere.get()
+                            PASS=cpasse.get()
+                            MOB=int(mobe.get())
+                            s=f"insert into user_database values('{USER}','{PASS}',{MOB});"
+                            mycon.execute(s)
+                            messagebox.showinfo("congrats","Your account is sucessfully created.")
+                            mycon.commit()
+
+                        # Signup Condition Errors 
+                        elif usere.get()=="":
+                            messagebox.showerror("usrename","Write Usrename!!")
+                        
+                        elif cpasse.get()!=passe.get():
+                            messagebox.showerror("Mismatch","Mismatch of passwords")
+
+                        elif mobe.get()=="":
+                            messagebox.showerror("Phone number","Please write your phone number!!")
+
+                        elif capxe.get()!=c:
+                            messagebox.showerror("Captcha","Invalid captcha !!")
+                        
+                        elif usere.get()=="" and cpasse.get()=="" and mobe.get()=="" and usere.get()=="":
+                            messagebox.showerror("Blank","Must fill all the details to create I'd")
+
+                    # General Exception Handling 
+                    except Exception as e:
+                        messagebox.showinfo("Error401",f"{e}")
+
+                # SignUp bagckground Img
+                new = Image.open(resource_path("Images/newregistration.jpg")).resize((1500, 770))
+                final_new = ImageTk.PhotoImage(new) 
+                
+                label = tk.Label(frame, image=final_new)
+                label.pack()
+
+                # Login button that checks the condition
+                Exit=ctk.CTkButton(frame,
+                                text="Login",
+                                width=150,
+                                height=40,
+                                corner_radius=10,
+                                font=("Arial",18),
+                                bg_color="#049EA8",
+                                hover_color="green4",
+                                text_color="black",
+                                fg_color="green3",
+                                border_color="green",
+                                border_width=2,
+                                command=left
+                                )
+                Exit.place(x=60,y=50)
+
+                n=tk.Label(frame, text="NEW REGISTRATION",font="Arial 17 bold",bg="#7092bf")
+                n.place(x=670, y=250)
+
+                create_username=tk.Label(frame, text="Create Username :",font="Arial 15 bold",bg="#7092bf")
+                create_username.place(x=560, y=310)
+
+                usere=tk.Entry(frame,font="Arial 15 bold")
+                usere.place(x=750,y=310)
+
+                create_pass=tk.Label(frame, text="Create Password :",font="Arial 15 bold",bg="#7092bf")
+                create_pass.place(x=563, y=350)
+
+                # Show and Hides the Password 
+                def toggle_passwordB():
+                    if passe.cget('show') == '*':
+                        passe.config(show='') 
+                        toggle_button2.config(image=final_show)
+                    else:
+                        passe.config(show='*')  
+                        toggle_button2.config(image=final_hide)
+
+                passe=tk.Entry(frame,font="Arial 15 bold",show="*")
+                passe.place(x=750,y=350)
+
+                toggle_button2 = tk.Button(frame, image=final_hide, command=toggle_passwordB,bg="white",bd=0)
+                toggle_button2.place(x=950,y=355)
+
+                confirm_pass=tk.Label(frame, text="Confirm Password :",font="Arial 15 bold",bg="#7092bf")
+                confirm_pass.place(x=548, y=390)
+
+                # Show and Hides the Password 
+                def toggle_passwordC():
+                    if cpasse.cget('show') == '*':
+                        cpasse.config(show='') 
+                        toggle_button3.config(image=final_show)
+                    else:
+                        cpasse.config(show='*')  
+                        toggle_button3.config(image=final_hide)
+
+                cpasse=tk.Entry(frame,font="Arial 15 bold",show="*")
+                cpasse.place(x=750,y=390)
+
+                toggle_button3 = tk.Button(frame, image=final_hide, command=toggle_passwordC,bg="white",bd=0)
+                toggle_button3.place(x=950,y=395)
+
+                mob=tk.Label(frame, text="Mobile No. :",font="Arial 15 bold",bg="#7092bf")
+                mob.place(x=620, y=430)
+
+                mobe=tk.Entry(frame,font="Arial 15 bold")
+                mobe.place(x=750,y=430)
+
+                capx=tk.Label(frame, text="Captcha :",font="Arial 15 bold",bg="#7092bf")
+                capx.place(x=643, y=470)
+
+                # Captcha Generation
+                def generate_cap():
+                    forcaptcha = "1234567890ABCDEFGH1JKLMNOPQRSTUVWXYZabcdefghijkLmnopqrstuvwxyz"
+                    c = ""
+                    for i in range(6):
+                        c += r.choice(forcaptcha)
+                    return c
+
+                # Multiple Captcha Generation 
+                def restarty():
+                    global c
+                    c = generate_cap()
+                    capy.config(text=c)
+
+                # Global Captcha 
+                global c
+                c=generate_cap()
+
+                capy=tk.Label(frame,text=c,font="Arial 15 bold",width=7)
+                capy.place(x=840,y=470)
+
+                capxe=tk.Entry(frame,font="Arial 15",width=7)
+                capxe.place(x=750,y=470)
+
+                submit=ctk.CTkButton(frame,
+                                    text="SUBMIT",
+                                    width=150,
+                                    height=40,
+                                    corner_radius=15,
+                                    font=("Arial",18),
+                                    bg_color="#7092bf",
+                                    hover_color="green4",
+                                    text_color="black",
+                                    fg_color="green3",
+                                    border_color="black",
+                                    border_width=2,
+                                    command=submit_command
+                                    )
+                submit.place(x=720,y=525)
+
+                # To regenerate captcha 
+                res = ctk.CTkButton(
+                frame,
+                text="refresh",
+                fg_color="#EE2C2C",
+                bg_color="#024347",
+                hover_color="#1E90FF",
+                text_color="black",
+                font=("Arial", 7, "bold"),
+                width=1,
+                height=5,
+                corner_radius=40,
+                command=restarty
+                )
+                res.place(x=940,y=480)
+
+                frame.mainloop()
+
+            # General Exception Handling 
+            except Exception as O:
+                messagebox.showerror("Error",f"{O}")
+
+
+        # Load the login image
+        login = Image.open(resource_path("Images/login.png")).resize((1500, 770))
+        final_login = ImageTk.PhotoImage(login)
+
+        # Main interface
+        label = tk.Label(rootx, image=final_login)
+        label.pack()
+
+        # General Exception Handling 
+        label2 = tk.Label(rootx, text="Don't have an account?", fg="black", bg="#049EA8", font="Arial 13")
+        label2.place(x=700, y=655)
+
+        # Final SignUp button 
+        signup_button = tk.Button(rootx,
+                                text="Sign Up",
+                                fg="lawngreen",
+                                bg="#049EA8",
+                                activebackground="#049EA8",
+                                bd=0,
+                                cursor="hand2",
+                                command=signup_frame
+                                )
+        signup_button.place(x=880, y=655)
+
+        name = tk.Entry(rootx, width=25, font="Arial 17")
+        name.place(x=660, y=370)
+
+        mob = tk.Entry(rootx, width=25, font="Arial 17")
+        mob.place(x=660, y=470)
+
+        # Display and Hides The password
+        def toggle_passwordA():
+            if password.cget('show') == '*':
+                password.config(show='') 
+                toggle_button1.config(image=final_show)
+            else:
+                password.config(show='*')  
+                toggle_button1.config(image=final_hide)
+
+        password = tk.Entry(rootx, width=25, font="Arial 17",show="*")
+        password.place(x=660, y=420)
+
+        # Create a toggle button
+        toggle_button1 = tk.Button(rootx, image=final_hide, command=toggle_passwordA,bg="white",bd=0)
+        toggle_button1.place(x=960,y=425)
+
+        #lABELS
+        L_name=tk.Label(rootx, text="Username :", bg="#024347", fg="white", font="Arial 17 bold")
+        L_name.place(x=520,y=370)
+
+        L_pass=tk.Label(rootx, text="Password :", bg="#024347", fg="white", font="Arial 17 bold")
+        L_pass.place(x=520,y=420)
+
+        L_mob=tk.Label(rootx, text="Mob. :", bg="#024347", fg="white", font="Arial 17 bold")
+        L_mob.place(x=575,y=470)
+
+        L_captcha=tk.Label(rootx, text="Captcha :", bg="#024347", fg="white", font="Arial 17 bold")
+        L_captcha.place(x=534,y=520)
+
+        # Captcha Generator 
+        def generate_captcha():
+            forcaptcha = "1234567890ABCDEFGHJKLMNOPQRSTUVWXYZabcdefghijkLmnopqrstuvwxyz"
+            captcha = "".join(r.choice(forcaptcha) for _ in range(6))
+            return captcha
+
+        # Again Generates Captcha 
+        def restartx():
+            global captcha
+            captcha = generate_captcha()
+            captchax.config(text=captcha)
+
+        # For Global Access the Captcha 
+        global captcha
+        captcha = generate_captcha()
+
+        captchax = tk.Label(rootx, text=captcha, height=1, width=7, font="Arial 15 bold")
+        captchax.place(x=810, y=520)
+
+        # Entry widget for user to input captcha
+        captchaen = tk.Entry(rootx, width=10, font="Arial 17")
+        captchaen.place(x=660, y=520)
+
+        # Login button setup
+        login_button2 = ctk.CTkButton(
+            rootx,
+            text="Login",
+            fg_color="green3",
+            bg_color="#024347",
+            hover_color="forestgreen",
+            text_color="black",
+            font=("Arial", 25, "bold"),
+            width=180,
+            height=30,
+            corner_radius=20,
+            command=loginfinal
+        )
+        login_button2.place(x=710, y=590)
+
+        # Refresh button setup
+        refresh_button = ctk.CTkButton(
+            rootx,
+            text="Refresh",
+            fg_color="#EE2C2C",
+            bg_color="#024347",
+            hover_color="#1E90FF",
+            text_color="black",
+            font=("Arial", 10, "bold"),
+            width=1,
+            height=5,
+            corner_radius=40,
+            command=restartx
+        )
+        refresh_button.place(x=910, y=525)
+
+        rootx.mainloop()
+
+    # First button of Enter 
+    button = ctk.CTkButton(
+        root,
+        text="ENTER",
+        command=button_click,
+        fg_color="#fe5900",  # Optional: Customize button color
+        bg_color="black",
+        hover_color="forestgreen",
+        text_color="black",
+        font=("Arial",40,"bold"),
+        width=270,
+        height=60,
+        corner_radius=20
+    )
+    button.place(x=620, y=590)  # Adjust the position of the button
+
+    # Run the application
+    
+    root.mainloop()
+
+    # Destroy Connection Between Python And Sql
+    mycon.close()
+
+# General Exception Handling 
+except Exception as exp:
+    messagebox.showerror("Error",f"{exp}")
